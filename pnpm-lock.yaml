@@ -15,6 +15,9 @@ importers:
       '@biomejs/biome':
         specifier: ^2.4.4
         version: 2.4.4
+      '@slack/types':
+        specifier: ^2.20.0
+        version: 2.20.0
       '@types/node':
         specifier: ^24.10.14
         version: 24.10.15
