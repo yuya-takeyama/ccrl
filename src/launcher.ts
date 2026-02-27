@@ -16,13 +16,13 @@ export async function removeWorktree(
 		repoPath,
 		"worktree",
 		"remove",
+		"--force",
 		worktreePath,
 	]);
 	const branchName = worktreePath.split("/").at(-1);
 	if (branchName) {
 		await execFileAsync("git", ["-C", repoPath, "branch", "-D", branchName]);
 	}
-}
 
 export async function createWorktree(repoPath: string): Promise<string> {
 	const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
