@@ -1,9 +1,12 @@
 import type { View } from "@slack/types";
+import { z } from "zod";
 import type { DirectoryEntry } from "./config.js";
 
-export interface ModalMetadata {
-	channelId: string;
-}
+export const ModalMetadataSchema = z.object({
+	channelId: z.string(),
+});
+
+export type ModalMetadata = z.infer<typeof ModalMetadataSchema>;
 
 export function buildLaunchModal(
 	directories: DirectoryEntry[],

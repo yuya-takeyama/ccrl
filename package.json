@@ -12,7 +12,8 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@slack/bolt": "^4.6.0"
+		"@slack/bolt": "^4.6.0",
+		"zod": "^4.3.6"
 	},
 	"packageManager": "pnpm@10.30.3",
 	"engines": {
