@@ -1,5 +1,6 @@
 node_modules/
 dist/
 .env
+.envrc
 ccrl.config.json
 .cc-slack-worktrees/

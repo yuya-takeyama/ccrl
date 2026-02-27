@@ -11,11 +11,12 @@
   "dependencies": {
     "@slack/bolt": "^4.6.0"
   },
+  "packageManager": "pnpm@10.30.3",
   "engines": {
     "node": "^24.0.0"
   },
   "devDependencies": {
-    "@types/node": "^25.3.1",
+    "@types/node": "^24.10.14",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
