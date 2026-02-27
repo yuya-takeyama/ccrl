@@ -7,6 +7,50 @@ const LAUNCH_TIMEOUT_MS = 30_000;
 // claude remote-control outputs the URL to connect to the session
 const REMOTE_CONTROL_URL_RE = /https:\/\/claude\.ai[^\s]*/;
 
+export async function removeWorktree(
+	repoPath: string,
+	worktreePath: string,
+): Promise<void> {
+	await execFileAsync("git", [
+		"-C",
+		repoPath,
+		"worktree",
+		"remove",
+		"--force",
+		"--",
+		worktreePath,
+	]);
+	const branchName = worktreePath.split("/").at(-1);
+	if (branchName) {
+		try {
+			await execFileAsync("git", [
+				"-C",
+				repoPath,
+				"branch",
+				"-D",
+				"--",
+				branchName,
+			]);
+		} catch (err: unknown) {
+			// Best-effort: if the branch is already gone, don't treat this as a failure.
+			const notFoundText = `branch '${branchName}' not found`;
+			const message = err instanceof Error ? err.message : String(err);
+			let stderr = "";
+			if (err !== null && typeof err === "object" && "stderr" in err) {
+				const stderrValue = (err as { stderr: unknown }).stderr;
+				if (typeof stderrValue === "string") {
+					stderr = stderrValue;
+				} else if (Buffer.isBuffer(stderrValue)) {
+					stderr = stderrValue.toString("utf-8");
+				}
+			}
+			if (!message.includes(notFoundText) && !stderr.includes(notFoundText)) {
+				throw err;
+			}
+		}
+	}
+}
+
 export async function createWorktree(repoPath: string): Promise<string> {
 	const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
 	const branchName = `claude-session-${timestamp}`;
