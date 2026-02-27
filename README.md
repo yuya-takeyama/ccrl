@@ -16,6 +16,7 @@ A Slack bot that launches [Claude Code](https://docs.anthropic.com/en/docs/claud
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) installed and authenticated (`claude` must be in your PATH)
 - A Slack workspace where you can install apps
 - [pnpm](https://pnpm.io/) (or npm/yarn)
+- [direnv](https://direnv.net/) for environment variable management
 
 ## Slack App Setup
 
@@ -48,11 +49,17 @@ pnpm build
 
 ### Environment Variables
 
-Copy `.env.example` to `.env` and fill in your tokens:
+Copy `.envrc.example` to `.envrc` and fill in your tokens:
 
 ```bash
-SLACK_BOT_TOKEN=xoxb-...
-SLACK_APP_TOKEN=xapp-...
+export SLACK_BOT_TOKEN=xoxb-...
+export SLACK_APP_TOKEN=xapp-...
+```
+
+Then allow direnv to load it:
+
+```bash
+direnv allow
 ```
 
 ### Directory Configuration
