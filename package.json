@@ -1,25 +1,28 @@
 {
-  "name": "ccrl",
-  "version": "0.1.0",
-  "description": "Claude Code Remote Launcher",
-  "type": "module",
-  "scripts": {
-    "dev": "tsx src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "test": "vitest run"
-  },
-  "dependencies": {
-    "@slack/bolt": "^4.6.0"
-  },
-  "packageManager": "pnpm@10.30.3",
-  "engines": {
-    "node": "^24.0.0"
-  },
-  "devDependencies": {
-    "@types/node": "^24.10.14",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.18"
-  }
+	"name": "ccrl",
+	"version": "0.1.0",
+	"description": "Claude Code Remote Launcher",
+	"type": "module",
+	"scripts": {
+		"dev": "tsx src/index.ts",
+		"build": "tsc",
+		"start": "node dist/index.js",
+		"test": "vitest run",
+		"lint": "biome ci .",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@slack/bolt": "^4.6.0"
+	},
+	"packageManager": "pnpm@10.30.3",
+	"engines": {
+		"node": "^24.0.0"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.4",
+		"@types/node": "^24.10.14",
+		"tsx": "^4.21.0",
+		"typescript": "^5.9.3",
+		"vitest": "^4.0.18"
+	}
 }

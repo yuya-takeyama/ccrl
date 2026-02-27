@@ -1,9 +1,9 @@
 {
-  "directories": [
-    {
-      "label": "ccrl",
-      "path": "/Users/yuya/src/github.com/yuya-takeyama/ccrl"
-    },
-    { "label": "dok", "path": "/Users/yuya/src/github.com/yuya-takeyama/dok" }
-  ]
+	"directories": [
+		{
+			"label": "ccrl",
+			"path": "/Users/yuya/src/github.com/yuya-takeyama/ccrl"
+		},
+		{ "label": "dok", "path": "/Users/yuya/src/github.com/yuya-takeyama/dok" }
+	]
 }
