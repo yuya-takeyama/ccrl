@@ -41,6 +41,10 @@ async function main() {
 
 		const selectedPath =
 			values.directory?.directory_select?.selected_option?.value;
+		const rawSessionName = values.session_name?.session_name_input?.value;
+		const sessionName = rawSessionName
+			? rawSessionName.trim() || undefined
+			: undefined;
 		const createWorktreeChecked = (
 			values.worktree?.worktree_checkbox?.selected_options ?? []
 		).some((opt) => opt.value === "create_worktree");
@@ -50,9 +54,19 @@ async function main() {
 		const dirEntry = config.directories.find((d) => d.path === selectedPath);
 		const dirLabel = dirEntry?.label ?? selectedPath;
 
+		const escapedSessionName = sessionName
+			?.replace(/&/g, "&amp;")
+			.replace(/</g, "&lt;")
+			.replace(/>/g, "&gt;");
+
+		const launchingText = [
+			`🚀 Launching Claude Code in *${dirLabel}*${createWorktreeChecked ? " (new worktree)" : ""}...`,
+			...(escapedSessionName ? [`📝 ${escapedSessionName}`] : []),
+		].join("\n");
+
 		const { ts: threadTs } = await client.chat.postMessage({
 			channel: channelId,
-			text: `🚀 Launching Claude Code in *${dirLabel}*${createWorktreeChecked ? " (new worktree)" : ""}...`,
+			text: launchingText,
 		});
 
 		void (async () => {

@@ -33,6 +33,21 @@ export function buildLaunchModal(
 			},
 			{
 				type: "input",
+				block_id: "session_name",
+				optional: true,
+				label: { type: "plain_text", text: "Session Name" },
+				hint: {
+					type: "plain_text",
+					text: "Add a name to identify what this session is for",
+				},
+				element: {
+					type: "plain_text_input",
+					action_id: "session_name_input",
+					placeholder: { type: "plain_text", text: "e.g. fix login bug" },
+				},
+			},
+			{
+				type: "input",
 				block_id: "worktree",
 				optional: true,
 				label: { type: "plain_text", text: "Options" },
