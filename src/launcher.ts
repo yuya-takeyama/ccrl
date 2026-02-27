@@ -21,8 +21,25 @@ export async function removeWorktree(
 	]);
 	const branchName = worktreePath.split("/").at(-1);
 	if (branchName) {
-		await execFileAsync("git", ["-C", repoPath, "branch", "-D", branchName]);
+		try {
+			await execFileAsync("git", ["-C", repoPath, "branch", "-D", branchName]);
+		} catch (err: unknown) {
+			// Best-effort: if the branch is already gone, don't treat this as a failure.
+			const notFoundText = `branch '${branchName}' not found`;
+			const message = err instanceof Error ? err.message : String(err);
+			const stderr =
+				err !== null &&
+				typeof err === "object" &&
+				"stderr" in err &&
+				Buffer.isBuffer((err as { stderr: unknown }).stderr)
+					? (err as { stderr: Buffer }).stderr.toString("utf-8")
+					: "";
+			if (!message.includes(notFoundText) && !stderr.includes(notFoundText)) {
+				throw err;
+			}
+		}
 	}
+}
 
 export async function createWorktree(repoPath: string): Promise<string> {
 	const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
