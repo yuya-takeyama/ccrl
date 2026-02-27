@@ -56,6 +56,28 @@ async function main() {
 	app.action("launch_ccrl", async ({ ack, body, client }) => {
 		await ack();
 		const { trigger_id } = TriggerIdBodySchema.parse(body);
+
+		if (config.directories.length === 0) {
+			await client.views.open({
+				trigger_id,
+				view: {
+					type: "modal",
+					title: { type: "plain_text", text: "No directories configured" },
+					close: { type: "plain_text", text: "Close" },
+					blocks: [
+						{
+							type: "section",
+							text: {
+								type: "mrkdwn",
+								text: "No directories configured. Create `ccrl.config.json` first.",
+							},
+						},
+					],
+				},
+			});
+			return;
+		}
+
 		await client.views.open({
 			trigger_id,
 			view: buildLaunchModal(config.directories),
@@ -91,8 +113,16 @@ async function main() {
 			responseChannelId = channelId;
 		} else {
 			const dm = await client.conversations.open({ users: body.user.id });
-			responseChannelId = dm.channel?.id ?? "";
-			if (!responseChannelId) return;
+			if (!dm.ok || !dm.channel?.id) {
+				console.error(
+					"Failed to open DM channel for user",
+					body.user.id,
+					"Slack API error:",
+					dm.error ?? "unknown error",
+				);
+				return;
+			}
+			responseChannelId = dm.channel.id;
 		}
 
 		const values = view.state.values;
