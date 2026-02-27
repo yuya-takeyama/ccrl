@@ -17,7 +17,7 @@ export function buildHomeView(directories: DirectoryEntry[]): View {
 					type: "section",
 					text: {
 						type: "mrkdwn",
-						text: "⚠️ No directories configured. Create `ccrl.config.json` first.",
+						text: "⚠️ No directories configured. Set the `CCRL_DIRS` env var or create `ccrl.config.json` first.",
 					},
 				},
 			],

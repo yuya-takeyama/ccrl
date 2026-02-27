@@ -10,7 +10,7 @@ A Slack bot that launches [Claude Code](https://docs.anthropic.com/en/docs/claud
 2. Tap **🚀 Launch Claude Code**
 3. Select a repository from the configured list
 4. Optionally check "Create new worktree" to work in an isolated git worktree
-5. Click Submit — the bot sends the Remote Control URL to your DM
+5. Click **Launch** — the bot sends the Remote Control URL to your DM
 6. Open the URL in your browser to connect to the Claude Code session
 
 ### From a Slack channel
@@ -18,7 +18,7 @@ A Slack bot that launches [Claude Code](https://docs.anthropic.com/en/docs/claud
 1. Type `/ccrl` in a Slack channel
 2. Select a repository from the configured list
 3. Optionally check "Create new worktree" to work in an isolated git worktree
-4. Click Submit — the bot posts the Remote Control URL to the thread
+4. Click **Launch** — the bot posts the Remote Control URL to the thread
 5. Open the URL in your browser to connect to the Claude Code session
 
 ## Prerequisites
