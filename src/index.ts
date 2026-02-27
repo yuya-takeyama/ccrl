@@ -129,20 +129,63 @@ async function main() {
 	app.action("delete_worktree", async ({ ack, body, client, action }) => {
 		await ack();
 
-		const { repoPath, worktreePath, userId } = JSON.parse(
-			(action as { value: string }).value,
-		) as { repoPath: string; worktreePath: string; userId: string };
-
 		const channel = (body as { channel?: { id: string } }).channel?.id;
 		const ts = (body as { message?: { ts: string } }).message?.ts;
+		const threadTs = (body as { message?: { thread_ts?: string } }).message
+			?.thread_ts;
 
 		if (!channel || !ts) return;
+
+		let repoPath: string;
+		let worktreePath: string;
+		let userId: string;
+		try {
+			const parsed = JSON.parse((action as { value: string }).value) as {
+				repoPath: string;
+				worktreePath: string;
+				userId: string;
+			};
+			repoPath = parsed.repoPath;
+			worktreePath = parsed.worktreePath;
+			userId = parsed.userId;
+		} catch {
+			await client.chat.update({
+				channel,
+				ts,
+				text: "❌ Failed to delete worktree: invalid action payload",
+				blocks: [
+					{
+						type: "section",
+						text: {
+							type: "mrkdwn",
+							text: "❌ Failed to delete worktree: invalid action payload",
+						},
+					},
+				],
+			});
+			return;
+		}
 
 		if (body.user.id !== userId) {
 			await client.chat.postEphemeral({
 				channel,
 				user: body.user.id,
 				text: "You are not authorized to delete this worktree.",
+			});
+			return;
+		}
+
+		// Validate that repoPath is one of the configured directories and
+		// worktreePath is inside its .cc-slack-worktrees/ subdirectory
+		const isValidRepo = config.directories.some((d) => d.path === repoPath);
+		const isValidWorktree = worktreePath.startsWith(
+			`${repoPath}/.cc-slack-worktrees/`,
+		);
+		if (!isValidRepo || !isValidWorktree) {
+			await client.chat.postEphemeral({
+				channel,
+				user: body.user.id,
+				text: "Invalid worktree path.",
 			});
 			return;
 		}
@@ -164,6 +207,7 @@ async function main() {
 				],
 			});
 		} catch (err) {
+			const errorMessage = err instanceof Error ? err.message : String(err);
 			await client.chat.update({
 				channel,
 				ts,
@@ -173,11 +217,18 @@ async function main() {
 						type: "section",
 						text: {
 							type: "mrkdwn",
-							text: `❌ Failed to delete worktree: \`${worktreePath}\`\n\`\`\`${err instanceof Error ? err.message : String(err)}\`\`\``,
+							text: `❌ Failed to delete worktree: \`${worktreePath}\``,
 						},
 					},
 				],
 			});
+			if (threadTs) {
+				await client.chat.postMessage({
+					channel,
+					thread_ts: threadTs,
+					text: `❌ Failed to delete worktree:\n\`\`\`${errorMessage}\`\`\``,
+				});
+			}
 		}
 	});
 

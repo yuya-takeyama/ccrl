@@ -17,23 +17,33 @@ export async function removeWorktree(
 		"worktree",
 		"remove",
 		"--force",
+		"--",
 		worktreePath,
 	]);
 	const branchName = worktreePath.split("/").at(-1);
 	if (branchName) {
 		try {
-			await execFileAsync("git", ["-C", repoPath, "branch", "-D", branchName]);
+			await execFileAsync("git", [
+				"-C",
+				repoPath,
+				"branch",
+				"-D",
+				"--",
+				branchName,
+			]);
 		} catch (err: unknown) {
 			// Best-effort: if the branch is already gone, don't treat this as a failure.
 			const notFoundText = `branch '${branchName}' not found`;
 			const message = err instanceof Error ? err.message : String(err);
-			const stderr =
-				err !== null &&
-				typeof err === "object" &&
-				"stderr" in err &&
-				Buffer.isBuffer((err as { stderr: unknown }).stderr)
-					? (err as { stderr: Buffer }).stderr.toString("utf-8")
-					: "";
+			let stderr = "";
+			if (err !== null && typeof err === "object" && "stderr" in err) {
+				const stderrValue = (err as { stderr: unknown }).stderr;
+				if (typeof stderrValue === "string") {
+					stderr = stderrValue;
+				} else if (Buffer.isBuffer(stderrValue)) {
+					stderr = stderrValue.toString("utf-8");
+				}
+			}
 			if (!message.includes(notFoundText) && !stderr.includes(notFoundText)) {
 				throw err;
 			}
