@@ -32,8 +32,8 @@ export function launchRemoteControl(directory: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn("claude", ["remote-control"], {
       cwd: directory,
-      // stdin を無視、stdout/stderr をキャプチャ
-      stdio: ["ignore", "pipe", "pipe"],
+      // stdin を無視、stdout をキャプチャ（URL は stdout に出力される）
+      stdio: ["ignore", "pipe", "inherit"],
     });
 
     let found = false;
@@ -56,7 +56,6 @@ export function launchRemoteControl(directory: string): Promise<string> {
     }
 
     child.stdout.on("data", onData);
-    child.stderr.on("data", onData);
 
     child.on("error", (err) => {
       if (!found) {
