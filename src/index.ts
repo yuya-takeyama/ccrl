@@ -1,6 +1,10 @@
 import { App } from "@slack/bolt";
 import { loadConfig } from "./config.js";
-import { createWorktree, launchRemoteControl } from "./launcher.js";
+import {
+	createWorktree,
+	launchRemoteControl,
+	removeWorktree,
+} from "./launcher.js";
 import { buildLaunchModal, type ModalMetadata } from "./modal.js";
 
 async function main() {
@@ -65,6 +69,42 @@ async function main() {
 						channel: channelId,
 						thread_ts: threadTs,
 						text: `🌿 Worktree created: \`${targetDir}\``,
+						blocks: [
+							{
+								type: "section",
+								text: {
+									type: "mrkdwn",
+									text: `🌿 Worktree created: \`${targetDir}\``,
+								},
+							},
+							{
+								type: "actions",
+								elements: [
+									{
+										type: "button",
+										text: { type: "plain_text", text: "Delete worktree" },
+										style: "danger",
+										action_id: "delete_worktree",
+										value: JSON.stringify({
+											repoPath: selectedPath,
+											worktreePath: targetDir,
+										}),
+										confirm: {
+											title: {
+												type: "plain_text",
+												text: "Delete worktree?",
+											},
+											text: {
+												type: "plain_text",
+												text: `Remove ${targetDir}?`,
+											},
+											confirm: { type: "plain_text", text: "Delete" },
+											deny: { type: "plain_text", text: "Cancel" },
+										},
+									},
+								],
+							},
+						],
 					});
 				}
 
@@ -83,6 +123,52 @@ async function main() {
 				});
 			}
 		})();
+	});
+
+	app.action("delete_worktree", async ({ ack, body, client, action }) => {
+		await ack();
+
+		const { repoPath, worktreePath } = JSON.parse(
+			(action as { value: string }).value,
+		) as { repoPath: string; worktreePath: string };
+
+		const channel = (body as { channel?: { id: string } }).channel?.id;
+		const ts = (body as { message?: { ts: string } }).message?.ts;
+
+		if (!channel || !ts) return;
+
+		try {
+			await removeWorktree(repoPath, worktreePath);
+			await client.chat.update({
+				channel,
+				ts,
+				text: `✅ Worktree deleted: \`${worktreePath}\``,
+				blocks: [
+					{
+						type: "section",
+						text: {
+							type: "mrkdwn",
+							text: `✅ Worktree deleted: \`${worktreePath}\``,
+						},
+					},
+				],
+			});
+		} catch (err) {
+			await client.chat.update({
+				channel,
+				ts,
+				text: `❌ Failed to delete worktree: \`${worktreePath}\``,
+				blocks: [
+					{
+						type: "section",
+						text: {
+							type: "mrkdwn",
+							text: `❌ Failed to delete worktree: \`${worktreePath}\`\n\`\`\`${err instanceof Error ? err.message : String(err)}\`\`\``,
+						},
+					},
+				],
+			});
+		}
 	});
 
 	await app.start();

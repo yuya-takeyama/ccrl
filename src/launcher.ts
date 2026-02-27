@@ -7,6 +7,23 @@ const LAUNCH_TIMEOUT_MS = 30_000;
 // claude remote-control outputs the URL to connect to the session
 const REMOTE_CONTROL_URL_RE = /https:\/\/claude\.ai[^\s]*/;
 
+export async function removeWorktree(
+	repoPath: string,
+	worktreePath: string,
+): Promise<void> {
+	await execFileAsync("git", [
+		"-C",
+		repoPath,
+		"worktree",
+		"remove",
+		worktreePath,
+	]);
+	const branchName = worktreePath.split("/").at(-1);
+	if (branchName) {
+		await execFileAsync("git", ["-C", repoPath, "branch", "-D", branchName]);
+	}
+}
+
 export async function createWorktree(repoPath: string): Promise<string> {
 	const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
 	const branchName = `claude-session-${timestamp}`;
