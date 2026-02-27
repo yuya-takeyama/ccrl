@@ -9,7 +9,8 @@
 		"start": "node dist/index.js",
 		"test": "vitest run",
 		"lint": "biome ci .",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"all": "pnpm lint && pnpm typecheck && pnpm test"
 	},
 	"dependencies": {
 		"@slack/bolt": "^4.6.0",
