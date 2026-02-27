@@ -37,7 +37,7 @@ async function main() {
 		});
 	});
 
-	app.view("ccrl_launch", async ({ ack, view, client }) => {
+	app.view("ccrl_launch", async ({ ack, view, body, client }) => {
 		await ack();
 
 		const { channelId } = JSON.parse(view.private_metadata) as ModalMetadata;
@@ -88,6 +88,7 @@ async function main() {
 										value: JSON.stringify({
 											repoPath: selectedPath,
 											worktreePath: targetDir,
+											userId: body.user.id,
 										}),
 										confirm: {
 											title: {
@@ -128,14 +129,23 @@ async function main() {
 	app.action("delete_worktree", async ({ ack, body, client, action }) => {
 		await ack();
 
-		const { repoPath, worktreePath } = JSON.parse(
+		const { repoPath, worktreePath, userId } = JSON.parse(
 			(action as { value: string }).value,
-		) as { repoPath: string; worktreePath: string };
+		) as { repoPath: string; worktreePath: string; userId: string };
 
 		const channel = (body as { channel?: { id: string } }).channel?.id;
 		const ts = (body as { message?: { ts: string } }).message?.ts;
 
 		if (!channel || !ts) return;
+
+		if (body.user.id !== userId) {
+			await client.chat.postEphemeral({
+				channel,
+				user: body.user.id,
+				text: "You are not authorized to delete this worktree.",
+			});
+			return;
+		}
 
 		try {
 			await removeWorktree(repoPath, worktreePath);
