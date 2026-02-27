@@ -1,11 +1,32 @@
 import { App } from "@slack/bolt";
+import { z } from "zod";
 import { loadConfig } from "./config.js";
 import {
 	createWorktree,
 	launchRemoteControl,
 	removeWorktree,
 } from "./launcher.js";
-import { buildLaunchModal, type ModalMetadata } from "./modal.js";
+import { buildLaunchModal, ModalMetadataSchema } from "./modal.js";
+
+const DeleteWorktreePayloadSchema = z.object({
+	repoPath: z.string(),
+	worktreePath: z.string(),
+	userId: z.string(),
+});
+
+const BlockActionBodySchema = z.object({
+	channel: z.object({ id: z.string() }).optional(),
+	message: z
+		.object({
+			ts: z.string(),
+			thread_ts: z.string().optional(),
+		})
+		.optional(),
+});
+
+const ButtonActionSchema = z.object({
+	value: z.string(),
+});
 
 async function main() {
 	const config = loadConfig();
@@ -40,7 +61,9 @@ async function main() {
 	app.view("ccrl_launch", async ({ ack, view, body, client }) => {
 		await ack();
 
-		const { channelId } = JSON.parse(view.private_metadata) as ModalMetadata;
+		const { channelId } = ModalMetadataSchema.parse(
+			JSON.parse(view.private_metadata),
+		);
 		const values = view.state.values;
 
 		const selectedPath =
@@ -143,10 +166,10 @@ async function main() {
 	app.action("delete_worktree", async ({ ack, body, client, action }) => {
 		await ack();
 
-		const channel = (body as { channel?: { id: string } }).channel?.id;
-		const ts = (body as { message?: { ts: string } }).message?.ts;
-		const threadTs = (body as { message?: { thread_ts?: string } }).message
-			?.thread_ts;
+		const { channel: channelObj, message } = BlockActionBodySchema.parse(body);
+		const channel = channelObj?.id;
+		const ts = message?.ts;
+		const threadTs = message?.thread_ts;
 
 		if (!channel || !ts) return;
 
@@ -154,14 +177,11 @@ async function main() {
 		let worktreePath: string;
 		let userId: string;
 		try {
-			const parsed = JSON.parse((action as { value: string }).value) as {
-				repoPath: string;
-				worktreePath: string;
-				userId: string;
-			};
-			repoPath = parsed.repoPath;
-			worktreePath = parsed.worktreePath;
-			userId = parsed.userId;
+			const { value } = ButtonActionSchema.parse(action);
+			const payload = DeleteWorktreePayloadSchema.parse(JSON.parse(value));
+			repoPath = payload.repoPath;
+			worktreePath = payload.worktreePath;
+			userId = payload.userId;
 		} catch {
 			await client.chat.update({
 				channel,
