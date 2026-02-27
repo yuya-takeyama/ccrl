@@ -1,8 +1,19 @@
 # ccrl - Claude Code Remote Launcher
 
-A Slack bot that launches [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) remote sessions from Slack. Run `/ccrl` in any channel, pick a repository, and get a Remote Control URL back in the thread — no terminal needed.
+A Slack bot that launches [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) remote sessions from Slack. Pick a repository from the App Home tab or run `/ccrl` in any channel, and get a Remote Control URL back — no terminal needed.
 
 ## How It Works
+
+### From App Home (recommended on mobile)
+
+1. Open the CCRL app and go to the **Home** tab
+2. Tap **🚀 Launch Claude Code**
+3. Select a repository from the configured list
+4. Optionally check "Create new worktree" to work in an isolated git worktree
+5. Click Submit — the bot sends the Remote Control URL to your DM
+6. Open the URL in your browser to connect to the Claude Code session
+
+### From a Slack channel
 
 1. Type `/ccrl` in a Slack channel
 2. Select a repository from the configured list
@@ -30,11 +41,18 @@ Create a new Slack app at [api.slack.com/apps](https://api.slack.com/apps):
    - Command: `/ccrl`
    - Short description: `Launch Claude Code remotely`
 
-4. **Add Bot Token Scopes** under "OAuth & Permissions → Scopes → Bot Token Scopes":
+4. **Enable App Home** under "Features → App Home":
+   - Turn on **Home Tab**
+
+5. **Subscribe to Bot Events** under "Features → Event Subscriptions":
+   - Enable Events and add `app_home_opened`
+
+6. **Add Bot Token Scopes** under "OAuth & Permissions → Scopes → Bot Token Scopes":
    - `chat:write`
    - `commands`
+   - `im:write` (for sending DMs when launched from App Home)
 
-5. **Install App** to your workspace → copy the Bot User OAuth Token (this is your `SLACK_BOT_TOKEN`)
+7. **Install App** to your workspace → copy the Bot User OAuth Token (this is your `SLACK_BOT_TOKEN`)
 
 ## Installation
 
@@ -116,10 +134,11 @@ When you check "Create new worktree" in the modal, ccrl creates a new git worktr
 
 ```
 src/
-  index.ts      # Slack app entry point (command & view handlers)
+  index.ts      # Slack app entry point (command, event & view handlers)
   config.ts     # Configuration loader
   launcher.ts   # Git worktree creation & claude remote-control spawner
   modal.ts      # Slack modal UI builder
+  home.ts       # App Home tab view builder
   config.test.ts
 ```
 
