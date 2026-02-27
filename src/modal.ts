@@ -3,14 +3,14 @@ import { z } from "zod";
 import type { DirectoryEntry } from "./config.js";
 
 export const ModalMetadataSchema = z.object({
-	channelId: z.string(),
+	channelId: z.string().optional(),
 });
 
 export type ModalMetadata = z.infer<typeof ModalMetadataSchema>;
 
 export function buildLaunchModal(
 	directories: DirectoryEntry[],
-	channelId: string,
+	channelId?: string,
 ): View {
 	return {
 		type: "modal",

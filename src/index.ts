@@ -1,6 +1,7 @@
 import { App } from "@slack/bolt";
 import { z } from "zod";
 import { loadConfig } from "./config.js";
+import { buildHomeView } from "./home.js";
 import {
 	createWorktree,
 	launchRemoteControl,
@@ -28,6 +29,10 @@ const ButtonActionSchema = z.object({
 	value: z.string(),
 });
 
+const TriggerIdBodySchema = z.object({
+	trigger_id: z.string(),
+});
+
 async function main() {
 	const config = loadConfig();
 
@@ -39,6 +44,22 @@ async function main() {
 		token: SLACK_BOT_TOKEN,
 		socketMode: true,
 		appToken: SLACK_APP_TOKEN,
+	});
+
+	app.event("app_home_opened", async ({ event, client }) => {
+		await client.views.publish({
+			user_id: event.user,
+			view: buildHomeView(config.directories),
+		});
+	});
+
+	app.action("launch_ccrl", async ({ ack, body, client }) => {
+		await ack();
+		const { trigger_id } = TriggerIdBodySchema.parse(body);
+		await client.views.open({
+			trigger_id,
+			view: buildLaunchModal(config.directories),
+		});
 	});
 
 	app.command("/ccrl", async ({ command, ack, client }) => {
@@ -64,6 +85,16 @@ async function main() {
 		const { channelId } = ModalMetadataSchema.parse(
 			JSON.parse(view.private_metadata),
 		);
+
+		let responseChannelId: string;
+		if (channelId) {
+			responseChannelId = channelId;
+		} else {
+			const dm = await client.conversations.open({ users: body.user.id });
+			responseChannelId = dm.channel?.id ?? "";
+			if (!responseChannelId) return;
+		}
+
 		const values = view.state.values;
 
 		const selectedPath =
@@ -92,7 +123,7 @@ async function main() {
 		].join("\n");
 
 		const { ts: threadTs } = await client.chat.postMessage({
-			channel: channelId,
+			channel: responseChannelId,
 			text: launchingText,
 		});
 
@@ -103,7 +134,7 @@ async function main() {
 				if (createWorktreeChecked) {
 					targetDir = await createWorktree(selectedPath);
 					await client.chat.postMessage({
-						channel: channelId,
+						channel: responseChannelId,
 						thread_ts: threadTs,
 						text: `🌿 Worktree created: \`${targetDir}\``,
 						blocks: [
@@ -149,13 +180,13 @@ async function main() {
 				const url = await launchRemoteControl(targetDir);
 
 				await client.chat.postMessage({
-					channel: channelId,
+					channel: responseChannelId,
 					thread_ts: threadTs,
 					text: `✅ Claude Code is ready!\n${url}`,
 				});
 			} catch (err) {
 				await client.chat.postMessage({
-					channel: channelId,
+					channel: responseChannelId,
 					thread_ts: threadTs,
 					text: `❌ Launch failed: ${err instanceof Error ? err.message : String(err)}`,
 				});
