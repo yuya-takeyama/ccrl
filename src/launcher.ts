@@ -25,10 +25,10 @@ export function isValidWorktreePath(
 	worktreePath: string,
 ): boolean {
 	const isValidRepo = directories.some((d) => d.path === repoPath);
-	// Resolve to normalize away any ".." path traversal attempts
+	// Resolve both sides to normalize ".." and trailing slashes consistently
 	const resolvedWorktree = resolve(worktreePath);
-	const expectedPrefix = `${repoPath}/.cc-slack-worktrees/`;
-	return isValidRepo && resolvedWorktree.startsWith(expectedPrefix);
+	const resolvedWorktreeRoot = resolve(repoPath, ".cc-slack-worktrees");
+	return isValidRepo && resolvedWorktree.startsWith(`${resolvedWorktreeRoot}/`);
 }
 
 export async function removeWorktree(

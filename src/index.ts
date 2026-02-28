@@ -275,6 +275,6 @@ async function main() {
 }
 
 main().catch((err) => {
-	console.error("❌ Failed to start CCRL:", formatErrorMessage(err));
+	console.error("❌ Failed to start CCRL:", formatErrorMessage(err), err);
 	process.exit(1);
 });
