@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(commit-commands:*)",
+      "Skill(commit-commands:commit-push-pr:*)",
+      "mcp__any-script__codex-search",
+      "Bash(pnpm biome check .)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm run typecheck)",
+      "Bash(pnpm test)",
+      "Bash(pnpm run test)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm run lint)",
+      "Bash(pnpm format)",
+      "Bash(pnpm run format)",
+      "Bash(pnpm all)",
+      "Bash(pnpm run all)"
+    ]
+  }
+}
