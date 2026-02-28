@@ -1,25 +1,24 @@
 import type { View } from "@slack/types";
 import type { DirectoryEntry } from "./config.js";
+import { mrkdwnSection } from "./slack-blocks.js";
 
 export function buildHomeView(directories: DirectoryEntry[]): View {
+	const header = {
+		type: "header" as const,
+		text: {
+			type: "plain_text" as const,
+			text: "CCRL - Claude Code Remote Launcher",
+		},
+	};
+
 	if (directories.length === 0) {
 		return {
 			type: "home",
 			blocks: [
-				{
-					type: "header",
-					text: {
-						type: "plain_text",
-						text: "CCRL - Claude Code Remote Launcher",
-					},
-				},
-				{
-					type: "section",
-					text: {
-						type: "mrkdwn",
-						text: "⚠️ No directories configured. Set the `CCRL_DIRS` env var or create `ccrl.config.json` first.",
-					},
-				},
+				header,
+				mrkdwnSection(
+					"⚠️ No directories configured. Set the `CCRL_DIRS` env var or create `ccrl.config.json` first.",
+				),
 			],
 		};
 	}
@@ -27,20 +26,8 @@ export function buildHomeView(directories: DirectoryEntry[]): View {
 	return {
 		type: "home",
 		blocks: [
-			{
-				type: "header",
-				text: {
-					type: "plain_text",
-					text: "CCRL - Claude Code Remote Launcher",
-				},
-			},
-			{
-				type: "section",
-				text: {
-					type: "mrkdwn",
-					text: "Launch a Claude Code remote session from here.",
-				},
-			},
+			header,
+			mrkdwnSection("Launch a Claude Code remote session from here."),
 			{
 				type: "actions",
 				elements: [
