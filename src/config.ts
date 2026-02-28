@@ -33,25 +33,34 @@ export function createConfigHolder(): ConfigHolder {
 
 	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
-	const watcher = watch(configPath, () => {
-		if (debounceTimer !== undefined) clearTimeout(debounceTimer);
-		debounceTimer = setTimeout(() => {
-			debounceTimer = undefined;
-			try {
-				const raw = readFileSync(configPath, "utf-8");
-				const newConfig = ConfigSchema.parse(JSON.parse(raw));
-				holder.current = newConfig;
-				console.log(
-					`[ccrl] Config reloaded: ${newConfig.directories.length} directories`,
-				);
-			} catch (err) {
-				console.error(
-					"[ccrl] Config reload failed, keeping previous config:",
-					err instanceof Error ? err.message : String(err),
-				);
-			}
-		}, 200);
-	});
+	let watcher: ReturnType<typeof watch>;
+	try {
+		watcher = watch(configPath, () => {
+			if (debounceTimer !== undefined) clearTimeout(debounceTimer);
+			debounceTimer = setTimeout(() => {
+				debounceTimer = undefined;
+				try {
+					const raw = readFileSync(configPath, "utf-8");
+					const newConfig = ConfigSchema.parse(JSON.parse(raw));
+					holder.current = newConfig;
+					console.log(
+						`[ccrl] Config reloaded: ${newConfig.directories.length} directories`,
+					);
+				} catch (err) {
+					console.error(
+						"[ccrl] Config reload failed, keeping previous config:",
+						err instanceof Error ? err.message : String(err),
+					);
+				}
+			}, 200);
+		});
+	} catch (err) {
+		console.warn(
+			"[ccrl] Could not watch config file, live reload disabled:",
+			err instanceof Error ? err.message : String(err),
+		);
+		return holder;
+	}
 
 	holder.close = () => {
 		if (debounceTimer !== undefined) clearTimeout(debounceTimer);
