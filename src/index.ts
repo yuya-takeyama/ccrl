@@ -1,6 +1,6 @@
 import { App } from "@slack/bolt";
 import { z } from "zod";
-import { loadConfig } from "./config.js";
+import { createConfigHolder } from "./config.js";
 import { buildHomeView } from "./home.js";
 import {
 	createWorktree,
@@ -40,7 +40,7 @@ const TriggerIdBodySchema = z.object({
 });
 
 async function main() {
-	const config = loadConfig();
+	const configHolder = createConfigHolder();
 
 	const { SLACK_BOT_TOKEN, SLACK_APP_TOKEN } = process.env;
 	if (!SLACK_BOT_TOKEN) throw new Error("SLACK_BOT_TOKEN is required");
@@ -55,7 +55,7 @@ async function main() {
 	app.event("app_home_opened", async ({ event, client }) => {
 		await client.views.publish({
 			user_id: event.user,
-			view: buildHomeView(config.directories),
+			view: buildHomeView(configHolder.current.directories),
 		});
 	});
 
@@ -63,7 +63,7 @@ async function main() {
 		await ack();
 		const { trigger_id } = TriggerIdBodySchema.parse(body);
 
-		if (config.directories.length === 0) {
+		if (configHolder.current.directories.length === 0) {
 			await client.views.open({
 				trigger_id,
 				view: {
@@ -82,14 +82,14 @@ async function main() {
 
 		await client.views.open({
 			trigger_id,
-			view: buildLaunchModal(config.directories),
+			view: buildLaunchModal(configHolder.current.directories),
 		});
 	});
 
 	app.command("/ccrl", async ({ command, ack, client }) => {
 		await ack();
 
-		if (config.directories.length === 0) {
+		if (configHolder.current.directories.length === 0) {
 			await client.chat.postMessage({
 				channel: command.channel_id,
 				text: "No directories configured. Create `ccrl.config.json` first.",
@@ -99,7 +99,10 @@ async function main() {
 
 		await client.views.open({
 			trigger_id: command.trigger_id,
-			view: buildLaunchModal(config.directories, command.channel_id),
+			view: buildLaunchModal(
+				configHolder.current.directories,
+				command.channel_id,
+			),
 		});
 	});
 
@@ -141,7 +144,9 @@ async function main() {
 
 		if (!selectedPath) return;
 
-		const dirEntry = config.directories.find((d) => d.path === selectedPath);
+		const dirEntry = configHolder.current.directories.find(
+			(d) => d.path === selectedPath,
+		);
 		const dirLabel = dirEntry?.label ?? selectedPath;
 
 		// Slack mrkdwn uses HTML entity escaping for &, <, > to prevent link/mention parsing
@@ -234,7 +239,13 @@ async function main() {
 			return;
 		}
 
-		if (!isValidWorktreePath(config.directories, repoPath, worktreePath)) {
+		if (
+			!isValidWorktreePath(
+				configHolder.current.directories,
+				repoPath,
+				worktreePath,
+			)
+		) {
 			await client.chat.postEphemeral({
 				channel,
 				user: body.user.id,
