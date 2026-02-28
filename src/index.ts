@@ -4,10 +4,16 @@ import { loadConfig } from "./config.js";
 import { buildHomeView } from "./home.js";
 import {
 	createWorktree,
+	isValidWorktreePath,
 	launchRemoteControl,
 	removeWorktree,
 } from "./launcher.js";
 import { buildLaunchModal, ModalMetadataSchema } from "./modal.js";
+import {
+	buildDeleteWorktreeBlocks,
+	formatErrorMessage,
+	mrkdwnSection,
+} from "./slack-blocks.js";
 
 const DeleteWorktreePayloadSchema = z.object({
 	repoPath: z.string(),
@@ -65,13 +71,9 @@ async function main() {
 					title: { type: "plain_text", text: "No directories configured" },
 					close: { type: "plain_text", text: "Close" },
 					blocks: [
-						{
-							type: "section",
-							text: {
-								type: "mrkdwn",
-								text: "No directories configured. Create `ccrl.config.json` first.",
-							},
-						},
+						mrkdwnSection(
+							"No directories configured. Create `ccrl.config.json` first.",
+						),
 					],
 				},
 			});
@@ -142,6 +144,7 @@ async function main() {
 		const dirEntry = config.directories.find((d) => d.path === selectedPath);
 		const dirLabel = dirEntry?.label ?? selectedPath;
 
+		// Slack mrkdwn uses HTML entity escaping for &, <, > to prevent link/mention parsing
 		const escapedSessionName = sessionName
 			?.replace(/&/g, "&amp;")
 			.replace(/</g, "&lt;")
@@ -167,43 +170,11 @@ async function main() {
 						channel: responseChannelId,
 						thread_ts: threadTs,
 						text: `🌿 Worktree created: \`${targetDir}\``,
-						blocks: [
-							{
-								type: "section",
-								text: {
-									type: "mrkdwn",
-									text: `🌿 Worktree created: \`${targetDir}\``,
-								},
-							},
-							{
-								type: "actions",
-								elements: [
-									{
-										type: "button",
-										text: { type: "plain_text", text: "Delete worktree" },
-										style: "danger",
-										action_id: "delete_worktree",
-										value: JSON.stringify({
-											repoPath: selectedPath,
-											worktreePath: targetDir,
-											userId: body.user.id,
-										}),
-										confirm: {
-											title: {
-												type: "plain_text",
-												text: "Delete worktree?",
-											},
-											text: {
-												type: "plain_text",
-												text: `Remove ${targetDir}?`,
-											},
-											confirm: { type: "plain_text", text: "Delete" },
-											deny: { type: "plain_text", text: "Cancel" },
-										},
-									},
-								],
-							},
-						],
+						blocks: buildDeleteWorktreeBlocks(
+							selectedPath,
+							targetDir,
+							body.user.id,
+						),
 					});
 				}
 
@@ -218,7 +189,7 @@ async function main() {
 				await client.chat.postMessage({
 					channel: responseChannelId,
 					thread_ts: threadTs,
-					text: `❌ Launch failed: ${err instanceof Error ? err.message : String(err)}`,
+					text: `❌ Launch failed: ${formatErrorMessage(err)}`,
 				});
 			}
 		})();
@@ -244,19 +215,12 @@ async function main() {
 			worktreePath = payload.worktreePath;
 			userId = payload.userId;
 		} catch {
+			const msg = "❌ Failed to delete worktree: invalid action payload";
 			await client.chat.update({
 				channel,
 				ts,
-				text: "❌ Failed to delete worktree: invalid action payload",
-				blocks: [
-					{
-						type: "section",
-						text: {
-							type: "mrkdwn",
-							text: "❌ Failed to delete worktree: invalid action payload",
-						},
-					},
-				],
+				text: msg,
+				blocks: [mrkdwnSection(msg)],
 			});
 			return;
 		}
@@ -270,13 +234,7 @@ async function main() {
 			return;
 		}
 
-		// Validate that repoPath is one of the configured directories and
-		// worktreePath is inside its .cc-slack-worktrees/ subdirectory
-		const isValidRepo = config.directories.some((d) => d.path === repoPath);
-		const isValidWorktree = worktreePath.startsWith(
-			`${repoPath}/.cc-slack-worktrees/`,
-		);
-		if (!isValidRepo || !isValidWorktree) {
+		if (!isValidWorktreePath(config.directories, repoPath, worktreePath)) {
 			await client.chat.postEphemeral({
 				channel,
 				user: body.user.id,
@@ -287,41 +245,26 @@ async function main() {
 
 		try {
 			await removeWorktree(repoPath, worktreePath);
+			const msg = `✅ Worktree deleted: \`${worktreePath}\``;
 			await client.chat.update({
 				channel,
 				ts,
-				text: `✅ Worktree deleted: \`${worktreePath}\``,
-				blocks: [
-					{
-						type: "section",
-						text: {
-							type: "mrkdwn",
-							text: `✅ Worktree deleted: \`${worktreePath}\``,
-						},
-					},
-				],
+				text: msg,
+				blocks: [mrkdwnSection(msg)],
 			});
 		} catch (err) {
-			const errorMessage = err instanceof Error ? err.message : String(err);
+			const msg = `❌ Failed to delete worktree: \`${worktreePath}\``;
 			await client.chat.update({
 				channel,
 				ts,
-				text: `❌ Failed to delete worktree: \`${worktreePath}\``,
-				blocks: [
-					{
-						type: "section",
-						text: {
-							type: "mrkdwn",
-							text: `❌ Failed to delete worktree: \`${worktreePath}\``,
-						},
-					},
-				],
+				text: msg,
+				blocks: [mrkdwnSection(msg)],
 			});
 			if (threadTs) {
 				await client.chat.postMessage({
 					channel,
 					thread_ts: threadTs,
-					text: `❌ Failed to delete worktree:\n\`\`\`${errorMessage}\`\`\``,
+					text: `❌ Failed to delete worktree:\n\`\`\`${formatErrorMessage(err)}\`\`\``,
 				});
 			}
 		}
@@ -332,9 +275,6 @@ async function main() {
 }
 
 main().catch((err) => {
-	console.error(
-		"❌ Failed to start CCRL:",
-		err instanceof Error ? err.message : err,
-	);
+	console.error("❌ Failed to start CCRL:", formatErrorMessage(err));
 	process.exit(1);
 });

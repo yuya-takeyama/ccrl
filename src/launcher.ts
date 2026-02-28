@@ -1,11 +1,35 @@
 import { execFile, spawn } from "node:child_process";
+import { resolve } from "node:path";
 import { promisify } from "node:util";
+import type { DirectoryEntry } from "./config.js";
 
 const execFileAsync = promisify(execFile);
 
 const LAUNCH_TIMEOUT_MS = 30_000;
 // claude remote-control outputs the URL to connect to the session
 const REMOTE_CONTROL_URL_RE = /https:\/\/claude\.ai[^\s]*/;
+
+export function generateBranchName(now: Date = new Date()): string {
+	const timestamp = now.toISOString().replace(/[:.]/g, "-").slice(0, 19);
+	return `claude-session-${timestamp}`;
+}
+
+export function extractRemoteControlUrl(text: string): string | undefined {
+	const match = text.match(REMOTE_CONTROL_URL_RE);
+	return match?.[0];
+}
+
+export function isValidWorktreePath(
+	directories: DirectoryEntry[],
+	repoPath: string,
+	worktreePath: string,
+): boolean {
+	const isValidRepo = directories.some((d) => d.path === repoPath);
+	// Resolve to normalize away any ".." path traversal attempts
+	const resolvedWorktree = resolve(worktreePath);
+	const expectedPrefix = `${repoPath}/.cc-slack-worktrees/`;
+	return isValidRepo && resolvedWorktree.startsWith(expectedPrefix);
+}
 
 export async function removeWorktree(
 	repoPath: string,
@@ -35,15 +59,10 @@ export async function removeWorktree(
 			// Best-effort: if the branch is already gone, don't treat this as a failure.
 			const notFoundText = `branch '${branchName}' not found`;
 			const message = err instanceof Error ? err.message : String(err);
-			let stderr = "";
-			if (err !== null && typeof err === "object" && "stderr" in err) {
-				const stderrValue = (err as { stderr: unknown }).stderr;
-				if (typeof stderrValue === "string") {
-					stderr = stderrValue;
-				} else if (Buffer.isBuffer(stderrValue)) {
-					stderr = stderrValue.toString("utf-8");
-				}
-			}
+			const stderr =
+				err !== null && typeof err === "object" && "stderr" in err
+					? String((err as { stderr: unknown }).stderr)
+					: "";
 			if (!message.includes(notFoundText) && !stderr.includes(notFoundText)) {
 				throw err;
 			}
@@ -52,8 +71,7 @@ export async function removeWorktree(
 }
 
 export async function createWorktree(repoPath: string): Promise<string> {
-	const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-	const branchName = `claude-session-${timestamp}`;
+	const branchName = generateBranchName();
 	const worktreePath = `${repoPath}/.cc-slack-worktrees/${branchName}`;
 
 	await execFileAsync("git", [
@@ -87,12 +105,11 @@ export function launchRemoteControl(directory: string): Promise<string> {
 
 		function onData(chunk: Buffer) {
 			if (found) return;
-			const text = chunk.toString("utf-8");
-			const match = text.match(REMOTE_CONTROL_URL_RE);
-			if (match) {
+			const url = extractRemoteControlUrl(chunk.toString("utf-8"));
+			if (url) {
 				found = true;
 				clearTimeout(timeout);
-				resolve(match[0]);
+				resolve(url);
 			}
 		}
 
